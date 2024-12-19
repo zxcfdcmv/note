@@ -11,6 +11,7 @@
 3. 添加笔记，提交测试
   ```shell
   touch test.md
+  git add .
   git commit -m "test"
   ```
 4. 连接远程仓库
@@ -28,3 +29,12 @@
   ```shell
   git push origin master
   ```
+
+# 后续使用
+推送文件时使用以下命令即可
+```shell
+cd /home/zxcf/Documents/git/note
+git add .
+git commit -m ""
+git push origin master
+```
