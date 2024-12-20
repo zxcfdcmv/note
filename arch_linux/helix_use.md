@@ -4,7 +4,7 @@
 ```
 
 # 配置
-> 配置文件在`~/.config/helix/config.toml`中
+> 配置文件在`~/.config/helix/config.toml`中,
 > 也能通过打开helix后，输入`:config-open`来打开配置文件
 ```toml
 theme = "onedark"
