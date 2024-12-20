@@ -29,11 +29,17 @@ soft-wrap = { enable = true, max-wrap = 0, max-indent-retain = 0, wrap-indicator
   ge: 移动到文件底部
   gh: 移动到行开头
   gl: 移动到行结尾
+  w/e: 以单词向下移动,并选择
+  b: 以单词向上移动,并选择
 ```
 ## 编辑
 ```
   u: 撤销
   U: 反撤销
+  wd: 删除下一个单词
+  bd: 删除上一个单词
+  Xd: 删除当前行
+  xd: 删除选中的行
   复制到寄存器: 选中文本后d或者y
   复制到系统剪切板: 选中文本后空格加y(Space+y)
   打开新的编辑: ctrl+w后,n+v
