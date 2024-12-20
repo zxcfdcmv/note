@@ -38,3 +38,8 @@ git add .
 git commit -m ""
 git push origin master
 ```
+
+文件有更新时使用以下命令
+```shell
+git pull origin master
+```
