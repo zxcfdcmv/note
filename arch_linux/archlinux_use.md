@@ -129,7 +129,114 @@ systemctl enable paccache.timer
 
 # AUR的使用
 ## 准备工作
-安装`base-devel`软件元包,用来编译软件
+1. 安装`base-devel`软件元包,用来编译软件
 ```shell
 pacman -S base-devel
+```
+2. 编辑`/etc/makepkg.conf`文件，调整构建软件包的方式，对编译做优化
+```shell
+sudo -e /etc/makepkg.conf
+```
+优化项
+```shell
+CFLAGS="......" # CFLAGS中先将-march和-mtune删除,再添加-march=native
+MAKEFLAGS="-j$(nproc)" # 取消该项注释,多核处理器可以启用并行编译,缩短编译时间
+BUILDDIR=/tmp/makepkg # 取消该项注释,使用内存文件系统进行编译
+COMPRESSZST=(zstd -c -z -q --threads=0 -) # 在压缩时使用多个CPU核心
+```
+## 安装AUR助手
+```shell
+pacman -S paru
+```
+paru的使用方式和pacman一致
+
+# 显卡驱动
+## NVIDIA显卡驱动
+查看NVIDIA显卡型号
+```shell
+lspci -k | grep -A -2 -E "(VGA|3D)"
+```
+然后,在该网站查看显卡型号对应的代号
+```
+  https://nouveau.freedesktop.org/CodeNames.html
+```
+|code name|official name|Nvidia 3D object codename|
+|:---|:---|:---|
+|NV160|GeForce RTX 2060|Turing|
+对于Turing系列的显卡,可以安装nvidia-open软件包(适用于linux内核)
+```shell
+paru -S nvidia-open
+```
+## 后续工作
+1. 编辑`/etc/mkinitcpio.conf`
+  ```shell
+  $ sudo -e /etc/mkinitcpio.conf
+
+  HOOKS=(... kms ...) # 去掉该配置中的kms
+  ```
+  重新生成initramfs
+  ```shell
+  mkinitcpio -P
+  ```
+
+2. 编辑`/etc/default/grub`
+  ```shell
+  $ sudo -e /etc/default/grub
+
+  GRUB_CMDLINE_LINUX_DEFAULT="... nvidia_drm.modeset=1" # 在该项配置中添加该字段, 此处作用为设置DRM为自动启用
+  ```
+  重新生成grub配置
+  ```shell
+  grub-mkconfig -o /boot/grub/grub.cfg
+  ```
+3. 设置pacman钩子,避免更新nvidia驱动后忘记更新initramfs
+  ```shell
+  /etc/pacman.d/hooks/nvidia.hook
+
+  [Trigger]
+  Operation=Install
+  Operation=Upgrade
+  Operation=Remove
+  Type=Package
+  Target=nvidia
+  Target=linux
+  # Change the linux part above and in the Exec line if a different kernel is used
+  # 如果使用不同的内核，请更改上面的 linux 部分和 Exec 行中的内容，例如更改为Target=nvidia-open
+  
+  [Action]
+  Description=Updating Nvidia module in initcpio
+  Depends=mkinitcpio
+  When=PostTransaction
+  NeedsTargets
+  Exec=/bin/sh -c 'while read -r trg; do case $trg in linux) exit 0; esac; done; /usr/bin/mkinitcpio -P'
+  ```
+
+4. 重启计算机
+  ```shell
+  reboot
+  ```
+
+# 混成器sway
+> sway是一个基于wayland的混成器
+> 要使用sway必须先启用DRM(直接渲染管理器)内核级显示模式设置
+
+使用以下命令验证DRM是否自动启用
+```shell
+cat /sys/module/nvidia_drm/parameters/modeset
+```
+如果返回Y的话, 证明DRM已经自动启动
+
+# 电源管理
+安装电源管理程序tlp
+```shell
+paru -S tlp
+```
+激活并启动tlp服务
+```shell
+systemctl enable --now tlp
+```
+禁用`systemd-rfkill.service`和`systemd-rfkill.socket`,以避免冲突
+```shell
+systemctl mask systemd-rfkill.service
+systemctl mask systemd-rfkill.socket
 ```
