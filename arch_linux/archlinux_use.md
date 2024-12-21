@@ -198,7 +198,7 @@ paru -S nvidia-open
   Operation=Upgrade
   Operation=Remove
   Type=Package
-  Target=nvidia
+  Target=nvidia-open
   Target=linux
   # Change the linux part above and in the Exec line if a different kernel is used
   # 如果使用不同的内核，请更改上面的 linux 部分和 Exec 行中的内容，例如更改为Target=nvidia-open
@@ -226,6 +226,32 @@ cat /sys/module/nvidia_drm/parameters/modeset
 ```
 如果返回Y的话, 证明DRM已经自动启动
 
+## 安装sway
+```shell
+paru -S sway
+```
+## 启动sway
+1. 安装seatd
+  ```shell
+  paru -S seatd
+  ```
+2. 添加用户到seat用户组
+  ```shell
+  usermod -aG seat $USER
+  ```
+3. 启动seatd服务
+  ```shell
+  systemctl enalbe --now seatd
+  ```
+4. 重新登陆并设置sway自动启动
+  在`~/.bashrc`中添加以下内容
+  ```shell
+  # helix ~/.bashrc
+
+  if [ -z $DISPLAY ] && [ "$(tty)" = "/dev/tty1" ]; then
+    exec sway
+  fi
+  ```
 # 电源管理
 安装电源管理程序tlp
 ```shell
