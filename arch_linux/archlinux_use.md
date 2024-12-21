@@ -252,6 +252,15 @@ paru -S sway
     exec sway
   fi
   ```
+# 用户目录
+用户目录, 如下载、文档等文件夹
+```shell
+paru -S xdg-user-dirs
+```
+创建默认目录
+```shell
+xdg-user-dirs-update
+```
 # 电源管理
 安装电源管理程序tlp
 ```shell
