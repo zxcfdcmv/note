@@ -82,4 +82,54 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # pacman的配置与使用
 ## 配置pacman
-> 通过编辑`/etc/pacman.conf`来
+> 通过编辑`/etc/pacman.conf`来配置pacman
+
+```shell
+sudo -e /etc/pacman.conf
+```
+启用颜色显示和并行下载
+```shell
+Color
+ParallelDownloads = 5
+```
+启用multilib仓库和archlinuxcn仓库
+```shell
+[multilib]
+Include = /etc/pacman.d/mirrorlist
+[archlinuxcn]
+Server = https://mirrors.bfsu.edu.cn/archlinuxcn/$arch
+```
+同步软件数据库
+> 如果开启了`archlinuxcn`仓库,要安装`arhclinuxcn-keyring`
+```shell
+pacman -Syyu
+pacman -S archlinuxcn-keyring
+```
+安装pkgstats
+> 定期上传软件列表、镜像源、计算机架构到archlinux官方
+```shell
+pacman -S pkgstats
+```
+
+## 使用pacman
+|功能|命令|
+|:---|:---|
+|安装软件包|`pacman -S 软件包名`|
+|移除软件包|`pacman -Rs 软件包名`|
+|同步软件数据库并更新系统|`pacman -Syu`|
+|强制同步软件数据库并更新系统|`pacman -Syyu`|
+|查询软件数据库|`pacman -Ss 字符串`|
+|查询文件|`pacman -F 字符串`|
+
+## 软件包缓存定期清理
+```shell
+pacman -S pacman-contrib
+systemctl enable paccache.timer
+```
+
+# AUR的使用
+## 准备工作
+安装`base-devel`软件元包,用来编译软件
+```shell
+pacman -S base-devel
+```
