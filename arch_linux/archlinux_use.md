@@ -252,6 +252,27 @@ paru -S sway
     exec sway
   fi
   ```
+
+## 配置sway
+编辑`~/.config/sway/config`文件来配置sway,在配置文件中添加以下配置
+安装clipman剪切板管理器
+```shell
+paru -S clipman
+```
+配置
+```shell
+# 设置字体
+font "JetBrainsMonoNerdFont 16"
+
+# 开启xwayland
+xwayland enable
+
+# 边框设置为1
+default_border pixel
+
+# 使用clipman剪切板
+exec wl-paste -t text --watch clipman store --no-persist
+```
 # 用户目录
 用户目录, 如下载、文档等文件夹
 ```shell
