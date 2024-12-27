@@ -215,7 +215,21 @@ paru -S nvidia-open
   ```shell
   reboot
   ```
-
+# 字体
+1. 安装字体
+```shell
+paru -S ttf-maple-beta
+```
+2. 建立缓存
+```shell
+fc-cache -fv
+```
+3. 查看字体
+```shell
+fc-list
+```
+4. 应用字体
+在各配置文件中应用字体, 例如: sway | alacritty
 # 混成器sway
 > sway是一个基于wayland的混成器
 > 要使用sway必须先启用DRM(直接渲染管理器)内核级显示模式设置
@@ -262,7 +276,7 @@ paru -S clipman
 配置
 ```shell
 # 设置字体
-font "JetBrainsMonoNerdFont 16"
+font "MapleMonoNFCN 16"
 
 # 开启xwayland
 xwayland enable
