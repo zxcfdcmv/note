@@ -97,7 +97,7 @@ ParallelDownloads = 5
 [multilib]
 Include = /etc/pacman.d/mirrorlist
 [archlinuxcn]
-Server = https://mirrors.bfsu.edu.cn/archlinuxcn/$arch
+Server = https://mirrors.tuna.tsinghua.edu.cn/archlinuxcn/$arch
 ```
 同步软件数据库
 > 如果开启了`archlinuxcn`仓库,要安装`arhclinuxcn-keyring`
@@ -109,6 +109,14 @@ pacman -S archlinuxcn-keyring
 > 定期上传软件列表、镜像源、计算机架构到archlinux官方
 ```shell
 pacman -S pkgstats
+```
+## pacman仓库
+配置pacman仓库下载镜像, 加快下载速度
+```shell
+paru -S reflector
+```
+```shell
+sudo reflector --country 'China' --latest 5 --sort rate -p https --connection-timeout 5 --save /etc/pacman.d/mirrorlist
 ```
 
 ## 使用pacman
