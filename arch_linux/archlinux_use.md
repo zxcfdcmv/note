@@ -15,6 +15,16 @@ nmcli device wifi connect "SSID" password "wifi密码"
 ```shell
 ping archlinux.org
 ```
+
+### 其他操作
+列出所有以保存的网络连接
+```shell
+nmcli connection show
+```
+删除一个网络连接
+```shell
+nmcli connection delete "MyWiFi"
+```
 - `ctrl+c`结束ping命令
 
 # 用户和用户组
