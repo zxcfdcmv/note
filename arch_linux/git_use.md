@@ -43,3 +43,9 @@ git push origin master
 ```shell
 git pull origin master
 ```
+
+# 重新使用
+重新使用git仓库时需要克隆
+```shell
+git clone git@github.com:zxcfdcmv/note.git
+```
