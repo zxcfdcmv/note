@@ -52,3 +52,4 @@ timeout = 100  # 超时时间（秒）
 retries = 3     # 重试次数
 # 禁用安装确认提示
 yes = true
+```
