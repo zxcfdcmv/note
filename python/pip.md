@@ -53,3 +53,14 @@ retries = 3     # 重试次数
 # 禁用安装确认提示
 yes = true
 ```
+
+# 常用模块
+1. pyright: Python 静态类型检查工具, 用于代码提示, 自动补全, 代码检查
+    ```shell
+    pip install pyright[nodejs]
+    ```
+1. ipykernel: Jupyter 内核, 用于快速测试代码
+    ```shell
+    pip install ipykernel
+    python -m ipykernel install --user
+    ```
