@@ -4,6 +4,7 @@
 ```
 
 # 配置
+## 通用配置
 > 配置文件在`~/.config/helix/config.toml`中,
 > 也能通过打开helix后，输入`:config-open`来打开配置文件
 ```toml
@@ -21,6 +22,33 @@ soft-wrap = { enable = true, max-wrap = 0, max-indent-retain = 0, wrap-indicator
     - `max-indent-retain`: 设置最大保留缩进,0表示不保留缩进
     - `wrap-indicator`: 设置换行指示符
     - `wrap-at-text-width`: 设置是否在文本宽度处换行
+
+## language配置
+安装模块
+```shell
+pip install ruff
+pip install jedi-language-server
+```
+在配置文件目录中新建`languages.toml`, 新增python的lsp配置
+```toml
+[[language]]
+name = "python"
+scope = "source.python"
+injection-regex = "py(thon)?"
+file-types = ["py", "pyi", "py3", "pyw", "ptl", "rpy", "cpy", "ipy", "pyt", { glob = ".python_history" }, { glob = ".pythonstartup" }, { glob = ".pythonrc" }, { glob = "SConstruct" }, { glob = "SConscript" }]
+shebangs = ["python"]
+roots = ["pyproject.toml", "setup.py", "poetry.lock", "pyrightconfig.json"]
+comment-token = "#"
+language-servers = ["jedi", "ruff"]
+formatter = { command = "ruff", args = ["format", "--stdin"] }
+
+[language-server]
+jedi = { command = "jedi-language-server" }
+ruff = { command = "ruff", args = ["server"] }
+# TODO: pyls needs utf-8 offsets
+#  indent = { tab-width = 4, unit = "    " }
+
+```
 
 # 使用
 ## 移动(g)
