@@ -12,7 +12,7 @@ theme = "onedark"
 
 [editor]
 # Enable soft wrapping (automatic line wrapping)
-soft-wrap = { enable = true, max-wrap = 0, max-indent-retain = 0, wrap-indicator = "↩", wrap-at-text-width = true }
+soft-wrap = { enable = true }
 ```
 - 配置说明
   - `theme`: 主题
