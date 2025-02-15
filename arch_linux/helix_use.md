@@ -31,23 +31,51 @@ pip install jedi-language-server
 ```
 在配置文件目录中新建`languages.toml`, 新增python的lsp配置
 ```toml
+use-grammars = { except = [ "wren", "gemini" ] }
+
+[language-server]
+ruff = { command = "ruff", args = ["server"] }
+jedi = { command = "jedi-language-server" }
+
 [[language]]
 name = "python"
 scope = "source.python"
 injection-regex = "py(thon)?"
 file-types = ["py", "pyi", "py3", "pyw", "ptl", "rpy", "cpy", "ipy", "pyt", { glob = ".python_history" }, { glob = ".pythonstartup" }, { glob = ".pythonrc" }, { glob = "SConstruct" }, { glob = "SConscript" }]
-shebangs = ["python"]
+shebangs = ["python", "uv"]
 roots = ["pyproject.toml", "setup.py", "poetry.lock", "pyrightconfig.json"]
 comment-token = "#"
-language-servers = ["jedi", "ruff"]
+language-servers = ["ruff", "jedi"]
 formatter = { command = "ruff", args = ["format", "--stdin"] }
-
-[language-server]
-jedi = { command = "jedi-language-server" }
-ruff = { command = "ruff", args = ["server"] }
 # TODO: pyls needs utf-8 offsets
-#  indent = { tab-width = 4, unit = "    " }
+indent = { tab-width = 4, unit = "    " }
 
+[[grammar]]
+name = "python"
+source = { git = "https://github.com/tree-sitter/tree-sitter-python", rev = "4bfdd9033a2225cc95032ce77066b7aeca9e2efc" }
+
+[language.debugger]
+name = "debugpy"
+transport = "stdio"
+command = "debugpy"
+
+[[language.debugger.templates]]
+name = "binary"
+request = "launch"
+completion = [ { name = "binary", completion = "filename" } ]
+args = { program = "{0}" }
+
+[[language.debugger.templates]]
+name = "binary (terminal)"
+request = "launch"
+completion = [ { name = "binary", completion = "filename" } ]
+args = { program = "{0}", runInTerminal = true }
+
+[[language.debugger.templates]]
+name = "attach"
+request = "attach"
+completion = [ "pid" ]
+args = { pid = "{0}" }
 ```
 
 # 使用
