@@ -1,21 +1,9 @@
-# 安装alacritty
-```shell
-paru -S alacritty
-```
-# 配置sway默认使用alacritty终端
-```shell
-# helix ~/.config/sway/config
-set $term alacritty
-```
-
-# 配置alacritty配置文件
-```shell
-helix ~/.config/alacritty/alacritty.toml
-```
-配置文件`alacritty.toml`内容:
-```toml
 [general]
 live_config_reload = true
+working_directory = "C:\\Users\\zxcf"
+
+[terminal]
+shell = "C:\\others\\program\\Git\\bin\\bash.exe"
 
 [colors]
 draw_bold_text_with_bright_colors = true
@@ -61,28 +49,28 @@ blinking = "off"
 shape = "Block"
 
 [font]
-size = 16.0
+size = 14.0
 
 [font.bold]
-family = "JetBrainsMonoNerdFont"
+family = "Maple Mono NF CN"
 style = "Bold"
 
 [font.bold_italic]
-family = "JetBrainsMonoNerdFont"
+family = "Maple Mono NF CN"
 style = "Bold Italic"
 
 [font.italic]
-family = "JetBrainsMonoNerdFont"
+family = "Maple Mono NF CN"
 style = "Italic"
 
 [font.normal]
-family = "JetBrainsMonoNerdFont"
+family = "Maple Mono NF CN"
 style = "Regular"
 
 [[hints.enabled]]
 command = "xdg-open"
 post_processing = true
-regex = "(magnet:|mailto:|gemini:|gopher:|https:|http:|news:|file:|git:|ssh:|ftp:)[^\u0000-\u001F\u007F-<>\"\\s{-}\\^⟨⟩`]+"
+regex = "(magnet:|mailto:|gemini:|gopher:|https:|http:|news:|file:|git:|ssh:|ftp:)[^\u0000-\u007F\\s\"<>\\\\^⟨⟩`-]+"
 
 [hints.enabled.mouse]
 enabled = true
@@ -137,10 +125,10 @@ multiplier = 3
 save_to_clipboard = true
 semantic_escape_chars = ",│`|:\"' ()[]{}<>\t@="
 
+
 [window]
 decorations = "full"
 dynamic_title = true
-opacity = 0.75
-startup_mode = "Fullscreen"
+opacity = 1
+startup_mode = "Maximized"
 title = "Alacritty"
-```
