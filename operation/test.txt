@@ -1,0 +1,188 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+pipeline {
+    agent any
+    options {
+        buildDiscarder(logRotator(
+            numToKeepStr: '10'    // 最多保留10次构建
+        ))    
+    }   
+    parameters {
+        choice(name: 'buildenv', choices: 'dev\ntest', description: '要更新的环境, dev为敏捷环境, test为测试环境')
+        choice(name: 'update_conf', choices: 'no\nyes', description: '是否更新配置文件')
+        string(name: 'env_ser', defaultValue: 'wlan,home', description: '请选择更新的业务')
+        string(name: 'env_pro', defaultValue: 'sc,qh,xj,zj', description: '请选择更新的省份(四川/青海/新疆/浙江)')
+        string(name: 'code_br', defaultValue: 'master', description: '使用的代码仓分支')
+    }
+    stages {
+        stage('拉取代码') {
+            steps {
+                cleanWs()
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.code_br}"]],
+                    userRemoteConfigs: [[url: 'ssh://git@szv-y.codehub.huawei.com:2222/IPTrace_V200R005_Repository/HOMELOGSERVER/HomeLogServer.git']]
+                ]            
+                milestone(label: '拉取代码完成', ordinal: 1)
+            }
+        }
+        stage('构建') {
+            steps {
+                script {
+                    def envSerList = params.env_ser.split(',')
+                    def envProList = params.env_pro.split(',')
+                    
+                    def combinations = []
+                    
+                    envSerList.each { i ->
+                        envProList.each { j ->
+                            dir("${WORKSPACE}/ssf-iptrace") {
+                                //def frontPath = sh(script: "find ./ -maxdepth 2 -type d -name \"${j}-${i}*-portal*\" | sed \"s,^\./,,\"", returnStdout: true).trim()
+                                 
+                                def frontPath = sh(script: """
+                                    find ./ -maxdepth 2 -type d -name "${j}-${i}*-portal*" | sed "s,^\\./,," 
+                                """, returnStdout: true).trim()
+                                if (frontPath) {
+                                    // Modify vue.config.js using sed
+                                    sh(script: """
+                                        sed -i -E "s#(ssf-iptrace/).*-starters/.*-portal.*(/src)#\\1${frontPath}\\2#g" ${WORKSPACE}/aui-sercurityframe/vue.config.js
+                                    """)
+                                    
+                                    // Yarn install and build
+                                    dir("${WORKSPACE}/aui-sercurityframe") {
+                                        sh 'yarn install'
+                                        sh 'yarn run build'
+                                    }
+                                    
+                                    // Maven build
+                                    dir("${WORKSPACE}/ssf-iptrace") {
+                                        sh "mvn clean package -Dmaven.test.skip=true -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -am -pl ${frontPath}"
+                                    }
+                                    // 将i、j和frontPath存储到combinations列表中
+                                    combinations.add([i: i, j: j, frontPath: frontPath])
+                                    // env.COMBINATIONS = JsonOutput.toJson(combinations)
+                                    // env.COMBINATIONS = JsonOutput.toJson(combinations.collect { [i: it.i, j: it.j, frontPath: it.frontPath] })
+                                    // combinations << [i: i, j: j, frontPath: frontPath]
+                                }                
+                            }
+                        }
+                    }
+                    env.COMBINATIONS = JsonOutput.toJson(combinations)
+                    // 将combinations列表保存到Pipeline的环境变量中
+                    // env.COMBINATIONS = combinations                
+                    echo "${COMBINATIONS}"
+                }
+                milestone(label: '构建完成', ordinal: 2)
+            }
+        }
+        stage('部署') {
+            steps {
+                script {
+                    // sh """
+                    //     ansible-playbook /data/jenkins/HomeLogServer/main.yml -i /data/jenkins/HomeLogServer/hosts -e "modulename=${buildenv}_${j}_${i} local_jar_path=${WORKSPACE}/ssf-iptrace/${frontPath}/target"
+                    // """
+                    
+                    // def combinations = env.COMBINATIONS
+                    // def combinations = readJSON text: env.COMBINATIONS
+                    echo "${COMBINATIONS}"
+                    def combinations = new JsonSlurper().parseText(env.COMBINATIONS)
+                    echo "${combinations}"
+                    def deployTasks = [:]
+                    combinations.each { combination ->
+                        def taskName = "deploy_${combination.j}_${combination.i}"
+                        deployTasks[taskName] = {
+                            sh """
+                                ansible-playbook ... -e "modulename=${buildenv}_${combination.j}_${combination.i} local_jar_path=${WORKSPACE}/ssf-iptrace/${combination.frontPath}/target"
+                            """
+                        }                    
+                    }
+                    // 并行执行部署任务
+                    parallel deployTasks                    
+                }
+                milestone(label: '部署完成', ordinal: 3)
+            }
+        }
+        
+    }
+}
+
+后报错:
+
+[Pipeline] echo
+[{"i":"wlan","j":"sc","frontPath":"wlan-starters/sc-wlan-portal"},{"i":"wlan","j":"qh","frontPath":"wlan-starters/qh-wlan-portal"}]
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] milestone (构建完成)
+Trying to pass milestone 2
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] stage
+[Pipeline] { (部署)
+[Pipeline] script
+[Pipeline] {
+[Pipeline] echo
+[{"i":"wlan","j":"sc","frontPath":"wlan-starters/sc-wlan-portal"},{"i":"wlan","j":"qh","frontPath":"wlan-starters/qh-wlan-portal"}]
+[Pipeline] echo
+[[frontPath:wlan-starters/sc-wlan-portal, i:wlan, j:sc], [frontPath:wlan-starters/qh-wlan-portal, i:wlan, j:qh]]
+[Pipeline] parallel
+[Pipeline] { (Branch: deploy_sc_wlan)
+[Pipeline] { (Branch: deploy_qh_wlan)
+[Pipeline] sh
+[Pipeline] sh
+[Pipeline] }
+Failed in branch deploy_qh_wlan
+[Pipeline] }
+Failed in branch deploy_sc_wlan
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
+[Pipeline] // stage
+[Pipeline] }
+[Pipeline] // node
+[Pipeline] End of Pipeline
+an exception which occurred:
+	in field com.cloudbees.groovy.cps.impl.FunctionCallEnv.locals
+	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@1649e334
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@27e25071
+	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
+	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@5f68d94
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@32d93c92
+	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
+	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@a67afe2
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@2d231b63
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.LoopBlockScopeEnv@52c68ef9
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@6ca0fde4
+	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
+	in object com.cloudbees.groovy.cps.impl.ClosureCallEnv@74a94e3f
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@70a30bee
+	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@22af16a8
+	in field com.cloudbees.groovy.cps.impl.CpsClosureDef.capture
+	in object com.cloudbees.groovy.cps.impl.CpsClosureDef@2beaa533
+	in field com.cloudbees.groovy.cps.impl.CpsClosure.def
+	in object org.jenkinsci.plugins.workflow.cps.CpsClosure2@41d3524a
+	in field com.cloudbees.groovy.cps.impl.BlockScopeEnv.locals
+	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@288fa282
+	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
+	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@21b83c43
+	in field com.cloudbees.groovy.cps.Continuable.e
+	in object com.cloudbees.groovy.cps.Continuable@395be9c
+	in field org.jenkinsci.plugins.workflow.cps.CpsThread.program
+	in object org.jenkinsci.plugins.workflow.cps.CpsThread@59b7510a
+	in field org.jenkinsci.plugins.workflow.cps.CpsThreadGroup.threads
+	in object org.jenkinsci.plugins.workflow.cps.CpsThreadGroup@10c83e3c
+	in object org.jenkinsci.plugins.workflow.cps.CpsThreadGroup@10c83e3c
+Also:   org.jenkinsci.plugins.workflow.actions.ErrorAction$ErrorId: 65dec26b-cc9e-4d08-8a1a-27d289969417
+Caused: java.io.NotSerializableException: groovy.json.internal.LazyMap
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.doWriteObject(RiverMarshaller.java:278)
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.writeKnownObject(RiverMarshaller.java:735)
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.doWriteObject(RiverMarshaller.java:217)
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.BlockMarshaller.doWriteObject(BlockMarshaller.java:65)
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.BlockMarshaller.writeObject(BlockMarshaller.java:56)
+	at PluginClassLoader for workflow-support//org.jboss.marshalling.MarshallerObjectOutputStream.writeObjectOverride(MarshallerObjectOutputStream.java:50)
