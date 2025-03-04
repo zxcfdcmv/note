@@ -1,0 +1,21 @@
+[Pipeline] {
+[Pipeline] echo
+[{"i":"wlan","j":"sc","frontPath":"wlan-starters/sc-wlan-portal"},{"i":"wlan","j":"qh","frontPath":"wlan-starters/qh-wlan-portal"}]
+[Pipeline] echo
+[[i:wlan, j:sc, frontPath:wlan-starters/sc-wlan-portal], [i:wlan, j:qh, frontPath:wlan-starters/qh-wlan-portal]]
+[Pipeline] parallel
+[Pipeline] { (Branch: deploy_[sc, qh]_[wlan, wlan])
+[Pipeline] sh
++ ansible-playbook ... -e 'modulename=dev_[sc, qh]_[wlan, wlan] local_jar_path=/app/jenkins/home/jobs/test_pipline/workspace/ssf-iptrace/[wlan-starters/sc-wlan-portal, wlan-starters/qh-wlan-portal]/target'
+[DEPRECATION WARNING]: Ansible will require Python 3.8 or newer on the 
+controller starting with Ansible 2.12. Current version: 3.7.9 (default, Jun 23 
+2021, 16:11:53) [GCC 7.3.0]. This feature will be removed from ansible-core in 
+version 2.12. Deprecation warnings can be disabled by setting 
+deprecation_warnings=False in ansible.cfg.
+ERROR! the playbook: ... could not be found
+[Pipeline] }
+Failed in branch deploy_[sc, qh]_[wlan, wlan]
+[Pipeline] // parallel
+[Pipeline] }
+[Pipeline] // script
+[Pipeline] }
