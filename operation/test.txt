@@ -71,6 +71,8 @@ pipeline {
                     // 将combinations列表保存到Pipeline的环境变量中
                     // env.COMBINATIONS = combinations                
                     echo "${COMBINATIONS}"
+                    // 将COMBINATIONS写入文件
+                    writeFile file: 'combinations.json', text: env.COMBINATIONS                    
                 }
                 milestone(label: '构建完成', ordinal: 2)
             }
@@ -78,111 +80,29 @@ pipeline {
         stage('部署') {
             steps {
                 script {
-                    // sh """
-                    //     ansible-playbook /data/jenkins/HomeLogServer/main.yml -i /data/jenkins/HomeLogServer/hosts -e "modulename=${buildenv}_${j}_${i} local_jar_path=${WORKSPACE}/ssf-iptrace/${frontPath}/target"
-                    // """
-                    
                     // def combinations = env.COMBINATIONS
                     // def combinations = readJSON text: env.COMBINATIONS
+                    // 从文件中读取COMBINATIONS
+                    def combinationsJson = readFile file: 'combinations.json'                    
                     echo "${COMBINATIONS}"
-                    def combinations = new JsonSlurper().parseText(env.COMBINATIONS)
+                    def combinations = new JsonSlurper().parseText(combinationsJson).collect { it as HashMap }
                     echo "${combinations}"
-                    def deployTasks = [:]
+                    // def deployTasks = [:]
                     combinations.each { combination ->
-                        def taskName = "deploy_${combination.j}_${combination.i}"
-                        deployTasks[taskName] = {
+                        def j = combinations.j.toString().trim()
+                        def i = combinations.i.toString().trim()
+                        def frontPath = combinations.frontPath.toString().trim()
+                        // def taskName = "deploy_${j}_${i}"
+                        // deployTasks[taskName] = {
                             sh """
-                                ansible-playbook ... -e "modulename=${buildenv}_${combination.j}_${combination.i} local_jar_path=${WORKSPACE}/ssf-iptrace/${combination.frontPath}/target"
+                                ansible-playbook /data/jenkins/HomeLogServer/main.yml -i /data/jenkins/HomeLogServer/hosts -e "modulename=${params.buildenv}_${j}_${i} local_jar_path=${WORKSPACE}/ssf-iptrace/${frontPath}/target"
                             """
-                        }                    
+                        // }
                     }
-                    // 并行执行部署任务
-                    parallel deployTasks                    
+                    // parallel deployTasks
                 }
                 milestone(label: '部署完成', ordinal: 3)
             }
         }
-        
     }
 }
-
-后报错:
-
-[Pipeline] echo
-[{"i":"wlan","j":"sc","frontPath":"wlan-starters/sc-wlan-portal"},{"i":"wlan","j":"qh","frontPath":"wlan-starters/qh-wlan-portal"}]
-[Pipeline] }
-[Pipeline] // script
-[Pipeline] milestone (构建完成)
-Trying to pass milestone 2
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] stage
-[Pipeline] { (部署)
-[Pipeline] script
-[Pipeline] {
-[Pipeline] echo
-[{"i":"wlan","j":"sc","frontPath":"wlan-starters/sc-wlan-portal"},{"i":"wlan","j":"qh","frontPath":"wlan-starters/qh-wlan-portal"}]
-[Pipeline] echo
-[[frontPath:wlan-starters/sc-wlan-portal, i:wlan, j:sc], [frontPath:wlan-starters/qh-wlan-portal, i:wlan, j:qh]]
-[Pipeline] parallel
-[Pipeline] { (Branch: deploy_sc_wlan)
-[Pipeline] { (Branch: deploy_qh_wlan)
-[Pipeline] sh
-[Pipeline] sh
-[Pipeline] }
-Failed in branch deploy_qh_wlan
-[Pipeline] }
-Failed in branch deploy_sc_wlan
-[Pipeline] }
-[Pipeline] // script
-[Pipeline] }
-[Pipeline] // stage
-[Pipeline] }
-[Pipeline] // node
-[Pipeline] End of Pipeline
-an exception which occurred:
-	in field com.cloudbees.groovy.cps.impl.FunctionCallEnv.locals
-	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@1649e334
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@27e25071
-	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
-	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@5f68d94
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@32d93c92
-	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
-	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@a67afe2
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@2d231b63
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.LoopBlockScopeEnv@52c68ef9
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@6ca0fde4
-	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
-	in object com.cloudbees.groovy.cps.impl.ClosureCallEnv@74a94e3f
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@70a30bee
-	in field com.cloudbees.groovy.cps.impl.ProxyEnv.parent
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@22af16a8
-	in field com.cloudbees.groovy.cps.impl.CpsClosureDef.capture
-	in object com.cloudbees.groovy.cps.impl.CpsClosureDef@2beaa533
-	in field com.cloudbees.groovy.cps.impl.CpsClosure.def
-	in object org.jenkinsci.plugins.workflow.cps.CpsClosure2@41d3524a
-	in field com.cloudbees.groovy.cps.impl.BlockScopeEnv.locals
-	in object com.cloudbees.groovy.cps.impl.BlockScopeEnv@288fa282
-	in field com.cloudbees.groovy.cps.impl.CallEnv.caller
-	in object com.cloudbees.groovy.cps.impl.FunctionCallEnv@21b83c43
-	in field com.cloudbees.groovy.cps.Continuable.e
-	in object com.cloudbees.groovy.cps.Continuable@395be9c
-	in field org.jenkinsci.plugins.workflow.cps.CpsThread.program
-	in object org.jenkinsci.plugins.workflow.cps.CpsThread@59b7510a
-	in field org.jenkinsci.plugins.workflow.cps.CpsThreadGroup.threads
-	in object org.jenkinsci.plugins.workflow.cps.CpsThreadGroup@10c83e3c
-	in object org.jenkinsci.plugins.workflow.cps.CpsThreadGroup@10c83e3c
-Also:   org.jenkinsci.plugins.workflow.actions.ErrorAction$ErrorId: 65dec26b-cc9e-4d08-8a1a-27d289969417
-Caused: java.io.NotSerializableException: groovy.json.internal.LazyMap
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.doWriteObject(RiverMarshaller.java:278)
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.writeKnownObject(RiverMarshaller.java:735)
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.RiverMarshaller.doWriteObject(RiverMarshaller.java:217)
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.BlockMarshaller.doWriteObject(BlockMarshaller.java:65)
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.river.BlockMarshaller.writeObject(BlockMarshaller.java:56)
-	at PluginClassLoader for workflow-support//org.jboss.marshalling.MarshallerObjectOutputStream.writeObjectOverride(MarshallerObjectOutputStream.java:50)
