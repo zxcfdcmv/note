@@ -1,0 +1,122 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+pipeline {
+    agent any
+    options {
+        buildDiscarder(logRotator(
+            numToKeepStr: '10'    // 最多保留10次构建
+        ))    
+    }   
+    parameters {
+        choice(name: 'buildenv', choices: 'dev\ntest', description: '要更新的环境, dev为敏捷环境, test为测试环境')
+        choice(name: 'update_conf', choices: 'no\nyes', description: '是否更新配置文件')
+        string(name: 'env_ser', defaultValue: 'wlan,home', description: '请选择更新的业务')
+        string(name: 'env_pro', defaultValue: 'sc,qh,xj,zj', description: '请选择更新的省份(四川/青海/新疆/浙江)')
+        choice(name: 'code_br', choices: 'master\nFIC65', description: '使用的代码仓分支')
+    }
+    stages {
+        stage('拉取代码') {
+            steps {
+                cleanWs()
+                checkout changelog: false, poll: false, scm: [
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.code_br}"]],
+                    userRemoteConfigs: [[url: 'ssh://git@szv-y.codehub.huawei.com:2222/IPTrace_V200R005_Repository/HOMELOGSERVER/HomeLogServer.git']]
+                ]            
+                milestone(label: '拉取代码完成', ordinal: 1)
+            }
+        }
+        stage('构建') {
+            steps {
+                script {
+                    def envSerList = params.env_ser.split(',')
+                    def envProList = params.env_pro.split(',')
+                    
+                    def combinations = []
+                    
+                    envSerList.each { i ->
+                        envProList.each { j ->
+                            dir("${WORKSPACE}/ssf-iptrace") {
+                                //def frontPath = sh(script: "find ./ -maxdepth 2 -type d -name \"${j}-${i}*-portal*\" | sed \"s,^\./,,\"", returnStdout: true).trim()
+                                 
+                                def frontPath = sh(script: """
+                                    find ./ -maxdepth 2 -type d -name "${j}-${i}*-portal*" | sed "s,^\\./,," 
+                                """, returnStdout: true).trim()
+                                if (frontPath) {
+                                    // Modify vue.config.js using sed
+                                    sh(script: """
+                                        sed -i -E "s#(ssf-iptrace/).*-starters/.*-portal.*(/src)#\\1${frontPath}\\2#g" ${WORKSPACE}/aui-sercurityframe/vue.config.js
+                                    """)
+                                    
+                                    // Yarn install and build
+                                    dir("${WORKSPACE}/aui-sercurityframe") {
+                                        sh 'yarn install'
+                                        sh 'yarn run build'
+                                    }
+                                    
+                                    // Maven build
+                                    dir("${WORKSPACE}/ssf-iptrace") {
+                                        sh "mvn clean package -Dmaven.test.skip=true -Dmaven.wagon.http.ssl.insecure=true -Dmaven.wagon.http.ssl.allowall=true -Dassembly.skipAssembly=true -am -pl ${frontPath}"
+                                    }
+                                    // 将i、j和frontPath存储到combinations列表中
+                                    combinations.add([i: i, j: j, frontPath: frontPath])
+                                    // env.COMBINATIONS = JsonOutput.toJson(combinations)
+                                    // env.COMBINATIONS = JsonOutput.toJson(combinations.collect { [i: it.i, j: it.j, frontPath: it.frontPath] })
+                                    // combinations << [i: i, j: j, frontPath: frontPath]
+                                }                
+                            }
+                        }
+                    }
+                    env.COMBINATIONS = JsonOutput.toJson(combinations)
+                    // 将combinations列表保存到Pipeline的环境变量中
+                    // env.COMBINATIONS = combinations                
+                    echo "${COMBINATIONS}"
+                    // 将COMBINATIONS写入文件
+                    writeFile file: 'combinations.json', text: env.COMBINATIONS                    
+                }
+                milestone(label: '构建完成', ordinal: 2)
+            }
+        }
+        stage('部署') {
+            steps {
+                script {
+                    // 从文件中读取COMBINATIONS
+                    def combinationsJson = readFile file: 'combinations.json'                    
+                    echo "${COMBINATIONS}"
+                    def combinations = new JsonSlurper().parseText(combinationsJson).collect { it as HashMap }
+                    echo "${combinations}"
+                    def deployTasks = [:]
+                    if (params.code_br == "master") {
+                        combinations.each { combination ->
+                            def j = combination.j.toString().trim()
+                            def i = combination.i.toString().trim()
+                            def frontPath = combination.frontPath.toString().trim()
+                            def taskName = "更新环境_${params.buildenv}_${j}_${i}_${params.code_br}分支"
+                            def playbookCommand = """
+                                ansible-playbook /data/jenkins/HomeLogServer/tasks/main.yml -i /data/jenkins/HomeLogServer/hosts -e "update_conf=${params.update_conf}  envName=${params.buildenv}_${j}_${i}  local_jar_path=${WORKSPACE}/ssf-iptrace/${frontPath}/target modName=${j}_${i}"
+                            """
+                            deployTasks[taskName] = {
+                                sh playbookCommand
+                            }
+                        }
+                    } else {
+                        combinations.each { combination ->
+                            def j = combination.j.toString().trim()
+                            def i = combination.i.toString().trim()
+                            def frontPath = combination.frontPath.toString().trim()
+                            def taskName = "更新环境_${params.buildenv}_${j}_${i}_${params.code_br}分支"
+                            def playbookCommand = """
+                                ansible-playbook /data/jenkins/HomeLogServer/tasks/main.yml -i /data/jenkins/HomeLogServer/hosts -e "update_conf=${params.update_conf} envName=${params.buildenv}_${j}_${i}_${params.code_br}  local_jar_path=${WORKSPACE}/ssf-iptrace/${frontPath}/target modName=${j}_${i}"
+                            """
+                            deployTasks[taskName] = {
+                                sh playbookCommand
+                            }
+                        }
+                    }                    
+                    parallel deployTasks
+                }
+                milestone(label: '部署完成', ordinal: 3)
+            }
+        }
+    }
+}
