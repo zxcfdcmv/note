@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>心灵音悦 - 音乐疗愈APP</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 450px;
+            margin: 0 auto;
+            background-color: #fff;
+            position: relative;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 顶部导航栏 */
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 8px;
+            font-size: 24px;
+        }
+        
+        .nav-icons {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .nav-icons i {
+            font-size: 20px;
+            cursor: pointer;
+        }
+        
+        /* 底部导航 */
+        .bottom-nav {
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            background-color: white;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .nav-item.active {
+            color: #2575fc;
+        }
+        
+        .nav-item i {
+            font-size: 20px;
+            margin-bottom: 4px;
+        }
+        
+        /* 页面内容 */
+        .page {
+            padding: 20px;
+            padding-bottom: 70px;
+        }
+        
+        /* 首页样式 */
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background-color: #f0f2f5;
+            border-radius: 20px;
+            padding: 8px 15px;
+            margin-bottom: 20px;
+        }
+        
+        .search-bar i {
+            color: #888;
+            margin-right: 10px;
+        }
+        
+        .search-bar input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 20px 0 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .section-title a {
+            font-size: 14px;
+            font-weight: normal;
+            color: #666;
+            text-decoration: none;
+        }
+        
+        .music-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .music-card {
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s;
+        }
+        
+        .music-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .music-cover {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        
+        .music-info {
+            padding: 10px;
+        }
+        
+        .music-title {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .music-desc {
+            font-size: 12px;
+            color: #888;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .banner {
+            width: 100%;
+            height: 120px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin: 15px 0;
+        }
+        
+        .category-list {
+            display: flex;
+            overflow-x: auto;
+            gap: 10px;
+            padding: 5px 0;
+            margin-bottom: 20px;
+        }
+        
+        .category-item {
+            min-width: 80px;
+            padding: 8px 15px;
+            background-color: #f0f2f5;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        .category-item.active {
+            background-color: #2575fc;
+            color: white;
+        }
+        
+        /* 医生页面样式 */
+        .doctor-card {
+            display: flex;
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .doctor-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 15px;
+        }
+        
+        .doctor-info {
+            flex: 1;
+        }
+        
+        .doctor-name {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .doctor-specialty {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        
+        .doctor-rating {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .stars {
+            color: #ffc107;
+            margin-right: 10px;
+        }
+        
+        .rating-text {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .doctor-actions {
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .call-btn {
+            background-color: #2575fc;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        .call-btn i {
+            margin-right: 5px;
+        }
+        
+        .shop-btn {
+            background-color: #f0f2f5;
+            color: #333;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+        
+        .shop-btn i {
+            margin-right: 5px;
+        }
+        
+        /* 我的页面样式 */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .user-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-right: 20px;
+        }
+        
+        .user-info h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .user-info p {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .order-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .order-title {
+            font-weight: bold;
+        }
+        
+        .order-status {
+            color: #2575fc;
+            font-size: 14px;
+        }
+        
+        .order-details {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .order-image {
+            width: 60px;
+            height: 60px;
+            border-radius: 5px;
+            object-fit: cover;
+            margin-right: 10px;
+        }
+        
+        .order-info {
+            flex: 1;
+        }
+        
+        .order-name {
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .order-price {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .order-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        
+        .action-btn {
+            padding: 6px 12px;
+            border: 1px solid #ddd;
+            border-radius: 15px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .menu-list {
+            margin-top: 20px;
+        }
+        
+        .menu-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+            align-items: center;
+        }
+        
+        .menu-item:last-child {
+            border-bottom: none;
+        }
+        
+        .menu-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .menu-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 10px;
+            color: #2575fc;
+        }
+        
+        .menu-text {
+            font-size: 16px;
+        }
+        
+        /* 页面切换 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航栏 -->
+        <div class="navbar">
+            <div class="logo">
+                <i class="bi bi-music-note-beamed"></i>
+                <span>心灵音悦</span>
+            </div>
+            <div class="nav-icons">
+                <i class="bi bi-search"></i>
+                <i class="bi bi-bell"></i>
+            </div>
+        </div>
+        
+        <!-- 首页内容 -->
+        <div class="page active" id="home">
+            <div class="search-bar">
+                <i class="bi bi-search"></i>
+                <input type="text" placeholder="搜索音乐、白噪音、疗愈课程...">
+            </div>
+            
+            <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="音乐疗愈" class="banner">
+            
+            <div class="category-list">
+                <div class="category-item active">全部</div>
+                <div class="category-item">减压</div>
+                <div class="category-item">睡眠</div>
+                <div class="category-item">专注</div>
+                <div class="category-item">冥想</div>
+                <div class="category-item">白噪音</div>
+                <div class="category-item">自然音</div>
+            </div>
+            
+            <div class="section-title">
+                <span>今日推荐</span>
+                <a href="#">更多</a>
+            </div>
+            
+            <div class="music-grid">
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1470225620780-dba8ba36b745?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="减压音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">深度放松钢琴曲</div>
+                        <div class="music-desc">舒缓压力，放松身心，适合学习工作后聆听</div>
+                    </div>
+                </div>
+                
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1514525253161-7a46d19cd819?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="睡眠音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">雨夜安眠曲</div>
+                        <div class="music-desc">轻柔雨声配合舒缓旋律，助你快速入眠</div>
+                    </div>
+                </div>
+                
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1458560871784-56d23406c091?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="专注音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">高效专注白噪音</div>
+                        <div class="music-desc">咖啡厅环境音，提升专注力，适合学习工作</div>
+                    </div>
+                </div>
+                
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="冥想音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">清晨冥想引导</div>
+                        <div class="music-desc">10分钟快速冥想，开启活力一天</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-title">
+                <span>学生专区</span>
+                <a href="#">更多</a>
+            </div>
+            
+            <div class="music-grid">
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1503676260728-1c00da094a0b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="学习音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">考试减压音乐</div>
+                        <div class="music-desc">缓解考前焦虑，稳定情绪</div>
+                    </div>
+                </div>
+                
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="学习音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">高效记忆α波</div>
+                        <div class="music-desc">增强记忆力，提高学习效率</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-title">
+                <span>职场解压</span>
+                <a href="#">更多</a>
+            </div>
+            <div class="music-grid">
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1521791055366-0d553872125f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="职场音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">午间小憩音乐</div>
+                        <div class="music-desc">15分钟快速恢复精力，缓解工作疲劳</div>
+                    </div>
+                </div>
+                
+                <div class="music-card">
+                    <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="职场音乐" class="music-cover">
+                    <div class="music-info">
+                        <div class="music-title">会议前镇定音乐</div>
+                        <div class="music-desc">平复紧张情绪，增强自信</div>
+                    </div>
+                </div>
+            </div>           
+        </div>
+    </div>
+    
+    <!-- 1V1医生页面 -->
+    <div class="page" id="doctor">
+        <div class="section-title">
+            <span>心理咨询师</span>
+        </div>
+        
+        <div class="doctor-card">
+            <img src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="医生头像" class="doctor-avatar">
+            <div class="doctor-info">
+                <div class="doctor-name">张心理师</div>
+                <div class="doctor-specialty">国家二级心理咨询师 | 专注压力管理</div>
+                <div class="doctor-rating">
+                    <div class="stars">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-half"></i>
+                    </div>
+                    <div class="rating-text">4.8 (326评价)</div>
+                </div>
+                <div class="doctor-actions">
+                    <button class="call-btn">
+                        <i class="bi bi-telephone"></i>
+                        立即咨询
+                    </button>
+                    <button class="shop-btn">
+                        <i class="bi bi-cart"></i>
+                        购买课程
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="doctor-card">
+            <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="医生头像" class="doctor-avatar">
+            <div class="doctor-info">
+                <div class="doctor-name">李治疗师</div>
+                <div class="doctor-specialty">音乐治疗师 | 睡眠障碍专家</div>
+                <div class="doctor-rating">
+                    <div class="stars">
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                        <i class="bi bi-star-fill"></i>
+                    </div>
+                    <div class="rating-text">5.0 (412评价)</div>
+                </div>
+                <div class="doctor-actions">
+                    <button class="call-btn">
+                        <i class="bi bi-telephone"></i>
+                        立即咨询
+                    </button>
+                    <button class="shop-btn">
+                        <i class="bi bi-cart"></i>
+                        购买课程
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section-title">
+            <span>推荐课程</span>
+        </div>
+        
+        <div class="music-grid">
+            <div class="music-card">
+                <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="课程" class="music-cover">
+                <div class="music-info">
+                    <div class="music-title">7天减压课程</div>
+                    <div class="music-desc">每天15分钟，学会管理压力</div>
+                </div>
+            </div>
+            
+            <div class="music-card">
+                <img src="https://images.unsplash.com/photo-1545205597-3d9d02c29597?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="课程" class="music-cover">
+                <div class="music-info">
+                    <div class="music-title">失眠自救指南</div>
+                    <div class="music-desc">改善睡眠质量，告别失眠</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 我的页面 -->
+    <div class="page" id="profile">
+        <div class="profile-header">
+            <img src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="用户头像" class="user-avatar">
+            <div class="user-info">
+                <h2>张同学</h2>
+                <p>学生 | 使用心灵音悦120天</p>
+            </div>
+        </div>
+        
+        <div class="order-card">
+            <div class="order-header">
+                <div class="order-title">我的订单</div>
+                <div class="order-status">查看全部</div>
+            </div>
+            
+            <div class="order-details">
+                <img src="https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=800&q=80" alt="订单" class="order-image">
+                <div class="order-info">
+                    <div class="order-name">7天减压课程</div>
+                    <div class="order-price">¥99.00</div>
+                </div>
+            </div>
+            
+            <div class="order-actions">
+                <button class="action-btn">再次购买</button>
+                <button class="action-btn">查看详情</button>
+            </div>
+        </div>
+        
+        <div class="menu-list">
+            <div class="menu-item">
+                <div class="menu-left">
+                    <i class="bi bi-heart menu-icon"></i>
+                    <div class="menu-text">我的收藏</div>
+                </div>
+                <i class="bi bi-chevron-right"></i>
+            </div>
+            
+            <div class="menu-item">
+                <div class="menu-left">
+                    <i class="bi bi-clock-history menu-icon"></i>
+                    <div class="menu-text">收听历史</div>
+                </div>
+                <i class="bi bi-chevron-right"></i>
+            </div>
+            
+            <div class="menu-item">
+                <div class="menu-left">
+                    <i class="bi bi-gear menu-icon"></i>
+                    <div class="menu-text">设置</div>
+                </div>
+                <i class="bi bi-chevron-right"></i>
+            </div>
+            
+            <div class="menu-item">
+                <div class="menu-left">
+                    <i class="bi bi-question-circle menu-icon"></i>
+                    <div class="menu-text">帮助与反馈</div>
+                </div>
+                <i class="bi bi-chevron-right"></i>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 底部导航栏 -->
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home')">
+            <i class="bi bi-house-door"></i>
+            <span>首页</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('doctor')">
+            <i class="bi bi-people"></i>
+            <span>1V1咨询</span>
+        </div>
+        <div class="nav-item" onclick="switchTab('profile')">
+            <i class="bi bi-person"></i>
+            <span>我的</span>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 切换标签页
+    function switchTab(tabId) {
+        // 隐藏所有页面
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        
+        // 显示选中的页面
+        document.getElementById(tabId).classList.add('active');
+        
+        // 更新底部导航状态
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.classList.remove('active');
+        });
+        
+        event.currentTarget.classList.add('active');
+    }
+    
+    // 模拟音乐卡片点击
+    document.querySelectorAll('.music-card').forEach(card => {
+        card.addEventListener('click', function() {
+            alert('即将播放: ' + this.querySelector('.music-title').textContent);
+        });
+    });
+    
+    // 模拟呼叫按钮点击
+    document.querySelectorAll('.call-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            alert('正在连接心理咨询师...');
+        });
+    });
+</script>
