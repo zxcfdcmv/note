@@ -1,0 +1,40 @@
+---
+- name: "更新覆盖率环境"
+  hosts: cover
+  tasks:
+    - name: "查找构建好的jar包"
+      find:
+        paths: "{{ local_jar_path }}"
+        patterns: "*.jar"
+        recurse: yes
+      register: jar_files
+      delegate_to: localhost
+      
+    - name: 搭建覆盖率环境
+      shell: |
+        curl 7.220.10.77:8011/v2/wk/IPTrace/{{ codeName }}/{{ updateModule }} &&
+        cd {{ env_src }}/IPTrace/{{ codeName }}/{{ updateModule }}/*/source &&
+        git clone {{ repoURL }}
+      args:
+        executable: /bin/bash      
+      when: coverUpdate|int == 0
+      
+    - name: 更新覆盖率环境
+      shell: |
+        cd {{ env_src }}/IPTrace/{{ codeName }}/{{ updateModule }}/*/source/*/ &&
+        git pull
+      args:
+        executable: /bin/bash      
+      when: coverUpdate|int == 2
+
+    - name: 查找 classes 目录
+      shell: "ls -d {{ env_src }}/IPTrace/{{ codeName }}/{{ updateModule }}/*/classes | head -1"
+      register: jar_target_dir
+      changed_when: false
+
+    - name: 拷贝jar包到classes目录
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ jar_target_dir.stdout }}/"
+      loop: "{{ jar_files.files }}"
+      when: jar_files.files is defined and jar_files.files|length > 0

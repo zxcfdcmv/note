@@ -1,0 +1,57 @@
+---
+- name: "更新{{ envName }}环境"
+  hosts: "{{ envName }}"
+  tasks:
+    - name: 确保本地按IP分类的目录存在
+      file:
+        path: "/data/jenkins/{{ codeName }}/{{ item }}/{{ inventory_hostname }}/{{ updateModule }}"
+        state: directory
+      delegate_to: localhost
+      loop:
+        - "old"
+        - "output"
+    # 检查远端配置文件是否存在
+    - name: 检查远端配置文件是否存在
+      stat:
+        path: "{{ remote_jar_path }}{{ updateModule }}/conf/{{ updateConfig }}"
+      register: remote_conf_stat
+    # 只在文件存在时才同步
+    - name: 拉取配置文件到jenkins
+      synchronize:
+        src: "{{ remote_jar_path }}{{ updateModule }}/conf/{{ updateConfig }}"
+        dest: "/data/jenkins/{{ codeName }}/old/{{ inventory_hostname }}/{{ updateModule }}/{{ updateConfig }}"
+        mode: pull
+        rsync_opts:
+          - "-e 'sshpass -p {{ ansible_password }} ssh -o StrictHostKeyChecking=no'"
+          - "--exclude=*/"
+      delegate_to: localhost
+      when: remote_conf_stat.stat.exists
+
+    - name: 合并配置文件
+      shell: |
+        python {{ ciHome }}/pubScript/mergedConf.py \
+          --old "/data/jenkins/{{ codeName }}/old/{{ inventory_hostname }}/{{ updateModule }}/{{ updateConfig }}" \
+          --new "{{ updatePath }}/resources/{{ updateConfig }}" \
+          --output "/data/jenkins/{{ codeName }}/output/{{ inventory_hostname }}/{{ updateModule }}/{{ updateConfig }}"
+      args:
+        executable: /bin/bash
+      delegate_to: localhost
+
+    - name: 确保远端配置文件目录存在
+      file:
+        path: "{{ remote_jar_path }}{{ updateModule }}/conf/{{ updateConfig | dirname }}"
+        state: directory
+        owner: "{{ ansible_user | default('logquery') }}"
+        group: "{{ ansible_user | default('logquery') }}"
+        mode: "0755"
+
+
+    - name: 推送配置文件到服务器
+      synchronize:
+        src: "/data/jenkins/{{ codeName }}/output/{{ inventory_hostname }}/{{ updateModule }}/{{ updateConfig }}"
+        dest: "{{ remote_jar_path }}{{ updateModule }}/conf/{{ updateConfig }}"
+        mode: push
+        rsync_opts:
+          - "-e 'sshpass -p {{ ansible_password }} ssh -o StrictHostKeyChecking=no'"
+          - "--exclude=*/"
+      delegate_to: localhost

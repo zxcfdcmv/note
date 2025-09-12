@@ -7,7 +7,7 @@ pipeline {
         jdk 'jdk8'
     }    
     options {
-        quietPeriod(600)     // 延迟至10分钟后构建
+        // quietPeriod(600)     // 延迟至10分钟后构建
         timeout(time: 10, unit: 'MINUTES')  // 总超时时间
         disableConcurrentBuilds()           // 禁止并发构建
         buildDiscarder(logRotator(numToKeepStr: '10')) // 最多保留10次构建
@@ -23,12 +23,40 @@ pipeline {
     }
     
     parameters {
-        choice(name: 'buildenv', choices: 'dev\ntest', description: '要更新的环境, dev为敏捷环境, test为冒烟环境')
+        choice(name: 'SQL_type', choices: 'MYSQL\nHuaweiGAUSS', description: '更新的sql类型')
+        booleanParam(name: 'buildSQL', defaultValue: true, description: '是否更新sql')
+        booleanParam(name: 'SQLAndBuild', defaultValue: true, description: '是否继续构建并更新配置文件')
+        choice(name: 'buildenv', choices: 'DEV\nTEST', description: '要更新的环境, DEV为敏捷环境, TEST为冒烟环境')
         string(name: 'env_mod', defaultValue: 'httpif,query,queryM,upload,uploadM,uploadResult', description: '请选择更新的模块(提新代码后自动触发构建针对敏捷环境此环境变量不会生效, 其他场景都会生效包括冒烟环境)')
         choice(name: 'envBr', choices: ['master'], description: '该变量用于处理手动触发流水线时的场景, (env.codehubSourceBranch环境变量只能在自动触发流水线时获取)')
         booleanParam(name: 'updateConfAll', defaultValue: false, description: '选中为全量更新配置文件, 不选中为增量更新配置文件(当有配置文件更新时), 默认为不选中')
+        booleanParam(name: 'enforce', defaultValue: false, description: '强制执行流水线')
     }
     stages {
+        stage('更新sql') {
+            when {
+                expression { 
+                    return params.buildSQL == true
+                }
+            }
+            steps {
+                dir("${WORKSPACE}/${env.codeBr}") {
+                    script {
+                        def projectEN = (params.SQL_type == 'HuaweiGAUSS') ? 'LOGQUERY_HuaweiGAUSS' : 'LOGQUERY'
+                        sh """
+                            echo "开始进行${params.buildenv} SQL更新"
+                            /data/ScriptManagementTool/SQLManagementTool.sh ${projectEN} ${CODE_NAME} ${params.buildenv} CMCCLOGQYUERY
+                        """
+                        if (!params.SQLAndBuild) {
+                            currentBuild.result = 'ABORTED'
+                            error("仅更新SQL，跳过构建阶段")
+                        }
+                    }
+                    
+                }
+                milestone(label: '拉取代码完成', ordinal: 1)
+            }
+        }
         stage('可构建分支检查') {
             steps {
                 script {
@@ -56,7 +84,7 @@ pipeline {
                     }
                     
                 }
-                milestone(label: '检查分支完成', ordinal: 1)
+                milestone(label: '检查分支完成', ordinal: 2)
             }
         }    
     
@@ -79,10 +107,16 @@ pipeline {
                     }
                         
                 }
-                milestone(label: '拉取代码完成', ordinal: 2)
+                milestone(label: '拉取代码完成', ordinal: 3)
             }
         }
+        
         stage('检查文件变更') {
+            when {
+                expression { 
+                    return params.updateConfAll == false
+                }
+            }
             steps {
                 dir("${WORKSPACE}/${env.codeBr}") {
                     script {
@@ -98,14 +132,20 @@ pipeline {
                                     
                                     // 遍历变更文件列表
                                     changedFiles.each { file ->
-                                        // 检查文件路径是否包含 "resources"
-                                        if (file.contains('ssfportal-cmcclogquery-starter') && file.contains('resources')) {
-                                            // 提取模块名和配置文件名
+                                        // 包含模块名与 resources，并且 resources/ 后是一级文件(不包含'/')
+                                        if (file.contains('ssfportal-cmcclogquery-starter') && file.contains('resources/')) {
                                             def parts = file.split('resources/')
-                                            // def updateModule = parts[0].split('/')[-3]
-                                            def updateModule = parts[0].split('/')[-3].replaceAll(/Starter$/, '')
-                                            def updateConfig = parts[1]
-                                            modifyFiles.add([updateModule: updateModule, updateConfig: updateConfig])
+                                            // 只处理 resources/下一级直属文件
+                                            if (parts.length > 1 && !parts[1].contains('/')) {
+                                                def updatePath = parts[0]
+                                                def updateModule = parts[0].split('/')[-3].replaceAll(/Starter$/, '')
+                                                def updateConfig = parts[1]
+                                                modifyFiles.add([
+                                                    updatePath: "${WORKSPACE}/${env.codeBr}/${updatePath}",
+                                                    updateModule: updateModule,
+                                                    updateConfig: updateConfig
+                                                ])
+                                            }
                                         }
                                         
                                     }
@@ -116,28 +156,32 @@ pipeline {
                                         }.join('\n')
                                         
                                         // 向welink发送消息
-                                        if (params.buildenv == 'dev') {
-                                            def content = """
-                                                |<span style='color:blue;font-weight:bold;'>配置文件需要更新</span>
-                                                |代码仓: ${env.CODE_NAME}
-                                                |待更新的配置文件:
-                                                |${configUpdates}
-                                            """.stripMargin().trim().toString()
-                                            
-                                            sh """
-                                                python3 ${CI_HOME}/pubScript/sendMessage.py "${content}"
-                                            """
-                                        }
+                                        def content = """
+                                            |<span style='color:blue;font-weight:bold;'>配置文件正在更新</span>
+                                            |代码仓: ${env.CODE_NAME}
+                                            |环境: ${params.buildenv}
+                                            |正在更新的配置文件:
+                                            |${configUpdates}
+                                        """.stripMargin().trim().toString()
+                                        
+                                        sh """
+                                            python3 ${CI_HOME}/pubScript/sendMessage.py "${content}"
+                                        """
+                                        
                                         // 需要更新的配置文件
                                         env.MODIFYFILES = JsonOutput.toJson(modifyFiles)                                        
                                     }
                                 }
+                            } else if (!params.enforce) {
+                                // 终止流水线并设置结果为ABORTED
+                                currentBuild.result = 'ABORTED'
+                                error("没有新代码提交, 终止流水线")
                             }
                         }
                     }
                 }
             
-                milestone(label: '检查文件变更完成', ordinal: 3)
+                milestone(label: '检查文件变更完成', ordinal: 4)
             }
         }
         stage('配置文件更新') {
@@ -153,10 +197,17 @@ pipeline {
                         
                         // 统一处理两种情况的文件列表
                         def modifyFileList = params.updateConfAll ? 
-                            params.env_mod.split(',').collect { [updateModule: it, updateConfig: ''] } : 
+                            params.env_mod.split(',').collect { mod ->
+                                [
+                                    updatePath: "${WORKSPACE}/${env.codeBr}/ssfportal/ssfportal-cmcclogquery-starter/${mod}Starter/src/main",
+                                    updateModule: mod,
+                                    updateConfig: ''
+                                ]
+                            } : 
                             readJSON(text: env.MODIFYFILES)  
                         modifyFileList.each { item ->
                             // 统一提取参数
+                            def updatePath = item.updatePath?.trim()
                             def updateModule = item.updateModule?.trim()
                             def updateConfig = item.updateConfig?.trim()
                             
@@ -174,7 +225,7 @@ pipeline {
                                 "codeName=${env.CODE_NAME}",
                                 "envName=${params.buildenv}_${env.codeBr}",
                                 "ciHome=${env.CI_HOME}",
-                                "updatePath=${WORKSPACE}/${env.codeBr}",
+                                "updatePath=${updatePath}",
                                 "updateModule=${updateModule}",
                                 "updateConfig=${updateConfig}"
                             ].findAll { it != null }
@@ -189,7 +240,7 @@ pipeline {
                         parallel configTasks
                     }
                 }
-                milestone(label: '配置文件更新完成', ordinal: 4)
+                milestone(label: '配置文件更新完成', ordinal: 5)
             }
         }            
         stage('构建') {
@@ -203,7 +254,7 @@ pipeline {
                         def coverMods = []
                         
                         def coverIP = ""
-                        if (params.buildenv == 'dev') {
+                        if (params.buildenv == 'DEV') {
                             sh """
                                 scp -o StrictHostKeyChecking=no root@7.220.10.77:${env.env_src}/env.yml ${env.env_dest}/env.yml
                             """
@@ -234,9 +285,9 @@ pipeline {
                                 
                                 if (modPath) {
                                     sh "mvn clean package ${MVN_OPTS} -am -pl ${modPath}"
-                                    buildMods.add([mod: mod, modPath: modPath])
+                                    buildMods.add([mod: mod, modPath: "ssfportal/${modPath}"])
                                     
-                                    if (params.buildenv == 'dev') {
+                                    if (params.buildenv == 'DEV') {
                                         def coverUpdate = sh(
                                             script: """
                                               python3 ${env.CI_HOME}/pubScript/coverUpdate.py ${env.env_dest}/env.yml \
@@ -259,16 +310,16 @@ pipeline {
                                                 python3 ${CI_HOME}/pubScript/sendMessage.py "${content}"
                                             """
                                         }
-                                        coverMods.add([mod: mod, modPath: modPath, coverUpdate: coverUpdate])
+                                        coverMods.add([mod: mod, modPath: "ssfportal/${modPath}", coverUpdate: coverUpdate])
                                     }
                                     
                                 }                        
                             }
                         }
-                        if (params.buildenv == 'dev') {
+                        if (params.buildenv == 'DEV') {
                             sh """
                                 scp -o StrictHostKeyChecking=no ${env.env_dest}/env.yml root@7.220.10.77:${env.env_src}/env.yml
-                                ssh root@7.220.10.77 "cd /opt/platform/bin; sh start.sh"
+                                ssh root@7.220.10.77 "cd /opt/platform/bin; sh start.sh &"
                             """
                             env.COVERMODS = JsonOutput.toJson(coverMods)
                         }
@@ -277,7 +328,7 @@ pipeline {
                     }
                 }
             
-                milestone(label: '构建完成', ordinal: 5)
+                milestone(label: '构建完成', ordinal: 6)
             }
         }
         stage('部署') {
@@ -297,23 +348,24 @@ pipeline {
                                     extraVars: [
                                         codeName: env.CODE_NAME,
                                         envName: "${params.buildenv}_${env.codeBr}",
-                                        local_jar_path: "${WORKSPACE}/${env.codeBr}/ssfportal/${modPath}/target",
-                                        extraPath: mod,
-                                    ]
+                                        local_jar_path: "${WORKSPACE}/${env.codeBr}/${modPath}/target",
+                                        updateModule: mod,
+                                    ],
+                                    options: "-vvvv"
                                 )
                             }
                         }
                         parallel deployTasks
                     }
                 }
-                milestone(label: '部署完成', ordinal: 6)
+                milestone(label: '部署完成', ordinal: 7)
             }
         }
         
         stage('覆盖率环境更新') {
             when {
                 expression { 
-                    return params.buildenv == 'dev' 
+                    return params.buildenv == 'DEV' 
                 }
             }            
             steps {
@@ -332,8 +384,8 @@ pipeline {
                                     inventory: "${env.CI_HOME}/codeConfig/${env.CODE_NAME}/hosts",
                                     extraVars: [
                                         codeName: env.CODE_NAME,
-                                        local_jar_path: "${WORKSPACE}/${env.codeBr}/ssfportal/${modPath}/target",
-                                        extraPath: mod,
+                                        local_jar_path: "${WORKSPACE}/${env.codeBr}/${modPath}/target",
+                                        updateModule: mod,
                                         repoURL: env.REPO_URL,
                                         coverUpdate: coverUpdate,
                                         env_src: env.env_src,
@@ -344,7 +396,7 @@ pipeline {
                         parallel coverTasks
                     }
                 }
-                milestone(label: '覆盖率环境更新完成', ordinal: 7)
+                milestone(label: '覆盖率环境更新完成', ordinal: 8)
             }
         }
         

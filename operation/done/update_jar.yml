@@ -1,0 +1,37 @@
+---
+- name: "更新{{ envName }}环境"
+  hosts: "{{ envName }}"
+  tasks:
+    - name: "清理jar日志"
+      shell: |
+        find "{{ remote_jar_path }}{{ updateModule }}/logs" -type f -name "*" -mtime +7 -delete
+      ignore_errors: yes
+    
+    - name: "备份jar包"
+      shell: |
+        find "{{ remote_jar_path }}{{ updateModule }}/bin" -maxdepth 1 -name "*.jar" -exec sh -c 'for f; do mv -v "$f" "${f}_$(date -d @$(stat -c %Y "$f") +%Y%m%d_%H%M%S)"; done' sh {} \;
+      changed_when: true
+    
+    - name: "查找构建好的jar包"
+      find:
+        paths: "{{ local_jar_path }}"
+        patterns: "*.jar"
+        recurse: yes
+      register: jar_files
+      delegate_to: localhost
+    
+    - name: "拷贝本地jar包到远程路径"
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ remote_jar_path }}{{ updateModule }}/bin"
+      loop: "{{ jar_files.files }}"
+      when: jar_files.files is defined and jar_files.files|length > 0
+    
+    - name: "删除 老jar包 的备份（保留最新两份）"
+      shell: |
+        find "{{ remote_jar_path }}{{ updateModule }}/bin" -maxdepth 1 -name "*jar_*" -type f -printf "%T@ %p\n" | sort -nr | awk '{if(NR>2) print $2}' | xargs rm -f
+      ignore_errors: yes
+      changed_when: true
+    
+    - name: "启动jar服务"
+      shell: "source /etc/profile && sh {{ remote_jar_path }}{{ updateModule }}/bin/start.sh"
