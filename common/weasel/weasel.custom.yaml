@@ -1,0 +1,55 @@
+patch:
+  # 追加／覆盖 style（保持 layout 等参数）
+  style/+:
+    label: "%s"
+    inline_preedit: true
+    font_face: "Maple Mono NF CN"
+    font_point: 13
+    label_font_point: 13
+    comment_font_point: 12
+    horizontal: true
+    layout:
+      max_width: 1000
+      min_width: 10
+      margin_x: 10
+      margin_y: 4
+      hilite_spacing: 4
+      hilite_padding_y: 4
+      hilite_padding_x: 10
+      shadow_radius: 0
+      corner_radius: 0
+      round_corner: 0
+      shadow_offset_x: 0
+      shadow_offset_y: 0
+      border_width: 0
+
+  # 强制全局无边框、无圆角
+  style:
+    border_width: 0
+    corner_radius: 0
+    candidate_corner_radius: 0
+    candidate_border_width: 0
+
+  # 主题中也清零圆角／边框，防止覆盖
+  preset_color_schemes:
+    nord_dark:
+      name: "Nord Dark"
+      author: "zxcfdcmv"
+      back_color: 0xff5e4c43
+      border_color: 0x00000000             # 直接设透明
+      text_color: 0xffc1a181
+      candidate_text_color: 0xffc1a181
+      comment_text_color: 0xffe9ded8
+      hilited_text_color: 0xffd0c088
+      hilited_back_color: 0xff5e4c43
+      hilited_candidate_text_color: 0xffd0c088
+      hilited_candidate_back_color: 0xff6a564c
+      label_color: 0xffc1a181
+      hilited_label_color: 0xffd0c088
+      comment_back_color: 0x00000000
+      shadow_color: 0x00000000
+      candidate_border_color: 0x00000000
+      hilited_candidate_border_color: 0x00000000
+      corner_radius: 0
+      hilited_corner_radius: 0
+      candidate_corner_radius: 0
