@@ -8,6 +8,7 @@ patch:
     label_font_point: 13
     comment_font_point: 12
     horizontal: true
+    color_scheme: nord_dark    # 全局用 nord_dark
     layout:
       max_width: 1000
       min_width: 10
