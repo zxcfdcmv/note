@@ -1,0 +1,65 @@
+com.gbasedbt.asf.IfxASFException: Attempt to connect to database server (7.212.57.80) failed.
+  Attempt to connect to database server (7.212.57.80) failed.
+
+[root@kwephis26497182 script]# hostname -i
+7.212.56.196
+[root@kwephis26497182 script]# gsql -d test -h 7.212.57.80 -p 15400 -U prologupload -W "IPTrace@123"
+gsql ((single_node GBase8sV8.8 S5.0.0B63 build 4bd67619) compiled at 2025-10-27 14:44:43 commit 0 last mr 909 )
+no license. 
+SSL connection (cipher: ECDHE-RSA-AES128-GCM-SHA256, bits: 128)
+Type "help" for help.
+
+test=> 
+test=> \l
+                             List of databases
+     Name     | Owner | Encoding  | Collate | Ctype |  Access privileges   
+--------------+-------+-----------+---------+-------+----------------------
+ portal       |       | SQL_ASCII | C       | C     | 
+ postgres     |       | SQL_ASCII | C       | C     | 
+ prologupload |       | SQL_ASCII | C       | C     | =Tc/gbase           +
+              |       |           |         |       | gbase=CTc/gbase     +
+              |       |           |         |       | prologupload=c/gbase
+ template0    |       | SQL_ASCII | C       | C     | =c/gbase            +
+              |       |           |         |       | gbase=CTc/gbase
+ template1    |       | SQL_ASCII | C       | C     | =c/gbase            +
+              |       |           |         |       | gbase=CTc/gbase
+ test         |       | SQL_ASCII | C       | C     | 
+ test1        |       | SQL_ASCII | C       | C     | 
+(7 rows)
+
+test=> 
+
+我远程已经能连了, 为什么用外部应用比如jdbc, dbeaver啥的怎么连不了
+注意是远程能连, 不是在本地
+[root@kwephis26497181 ~]# iptables -L
+Chain INPUT (policy ACCEPT)
+target     prot opt source               destination         
+ACCEPT     tcp  --  anywhere             anywhere             tcp dpt:19100
+
+Chain FORWARD (policy ACCEPT)
+target     prot opt source               destination         
+
+Chain OUTPUT (policy ACCEPT)
+target     prot opt source               destination         
+[root@kwephis26497181 ~]# systemctl status iptables
+○ iptables.service - IPv4 firewall with iptables
+     Loaded: loaded (/usr/lib/systemd/system/iptables.service; disabled; vendor preset: disabled)
+     Active: inactive (dead)
+[root@kwephis26497181 ~]# systemctl status firewalld
+○ firewalld.service - firewalld - dynamic firewall daemon
+     Loaded: loaded (/usr/lib/systemd/system/firewalld.service; disabled; vendor preset: enabled)
+     Active: inactive (dead)
+       Docs: man:firewalld(1)
+防火墙都关了
+端口也没问题:
+[root@kwephis26497181 ~]# ss -auntpl | grep gbase
+tcp   LISTEN 0      1200                        7.212.57.80:15400      0.0.0.0:*    users:(("gbased",pid=3363080,fd=12))     
+tcp   LISTEN 0      1200                          127.0.0.1:15400      0.0.0.0:*    users:(("gbased",pid=3363080,fd=9))      
+tcp   LISTEN 0      1200                        7.212.57.80:15401      0.0.0.0:*    users:(("gbased",pid=3363080,fd=13))     
+tcp   LISTEN 0      1200                          127.0.0.1:15401      0.0.0.0:*    users:(("gbased",pid=3363080,fd=11))     
+tcp   LISTEN 0      1200                              [::1]:15400         [::]:*    users:(("gbased",pid=3363080,fd=8))      
+tcp   LISTEN 0      1200                              [::1]:15401         [::]:*    users:(("gbased",pid=3363080,fd=10))     
+jdbc连接:
+jdbc:gbasedbt-sqli://7.212.57.80:15400/test:GBASEDBTSERVER=7.212.57.80
+
+哪儿出问题了? 为什么连不上
