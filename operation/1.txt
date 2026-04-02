@@ -1,0 +1,126 @@
+{ config, pkgs, lib, userSettings, ... }:
+
+{
+    # 这里的 eDP-1 请确保与 wlr-randr 查到的一致
+    boot.kernelParams = [ "video=eDP-1:1280x960@144" ];
+
+    programs.river.enable = true;
+    programs.river.extraPackages = with pkgs; [ xwayland ];
+
+    services.greetd = {
+        enable = true;
+        settings.default_session.command = ''
+            ${pkgs.tuigreet}/bin/tuigreet \
+            --cmd "${pkgs.river}/bin/river-session" \
+            --theme "dark" --remember --remember-session
+        '';
+    };
+
+    xdg.portal = {
+        enable = true;
+        extraPortals = with pkgs; [
+            xdg-desktop-portal-wlr
+            xdg-desktop-portal-gtk
+        ];
+        config = {
+            # 增加专门针对 river 的配置
+            river = {
+            default = [ "wlr" "gtk" ]; # 优先用 wlr，弹窗和文件选择用 gtk
+            };
+            common = {
+            default = [ "wlr" ];
+            };
+        };
+    };
+
+    # --- 2. 用户级配置 (通过 home-manager.users 注入) ---
+    home-manager.users.${userSettings.username} = { osConfig, ... }: {
+        wayland.windowManager.river = {
+            enable = true;
+            settings = {
+                # 优化后的按键速率，防止误杀
+                set-repeat = "25 300";
+                input."type:pointer" = {
+                    accel-profile = "flat";
+                    pointer-accel = "0.0";
+                };
+                input."type:touchpad" = {
+                    tap = "enabled";
+                    natural-scroll = "enabled";
+                };
+
+                # 窗口规则：解决覆盖、边框与焦点
+                rule-add = [
+                    "-app-id 'steam_app_*' float"
+                    "-app-id 'steam_app_*' titlebar off"
+                    "-app-id '*' server-side-decoration"
+                    "-app-id '*' opacity 0.8"
+                ];
+
+                border-width = 2;
+                focused-color = "0x505050";
+                background-color = "0x000000";
+                focus-follows-cursor = "disabled";
+
+                # 快捷键：包含 1-9 标签切换循环
+                map.normal = (
+                    let
+                        # 生成 1-9 标签的位掩码映射
+                        tagList = builtins.genList (i: {
+                            name = toString (i + 1);
+                            value = toString (lib.bitset.singleton i);
+                        }) 9;
+                    in
+                    builtins.listToAttrs (builtins.concatLists (map (t: [
+                        { name = "Super ${t.name}"; value = "set-focused-tags ${t.value}"; }
+                        { name = "Super+Shift ${t.name}"; value = "set-view-tags ${t.value}"; }
+                        { name = "Super+Control ${t.name}"; value = "toggle-focused-tags ${t.value}"; }
+                    ]) tagList))
+                ) // {
+                    # 核心控制
+                    "Super Q" = "close";
+                    "Super F" = "zoom";
+                    "Super+Shift F" = "toggle-fullscreen";
+                    "Super Space" = "toggle-float";
+                    "Super E" = "exit";
+
+                    # 焦点切换
+                    "Super S" = "focus-view next";
+                    "Super A" = "focus-view previous";
+
+                    # 布局调整
+                    "Super Z" = "send-layout-cmd rivertile 'main-ratio -0.05'";
+                    "Super X" = "send-layout-cmd rivertile 'main-ratio +0.05'";
+
+                    # 程序启动
+                    "Super T" = "spawn ${pkgs.foot}/bin/footclient";
+                    "Alt Space" = "spawn toggle-fuzzel";
+                    "Mod grave" = "spawn toggle-central-hub";
+
+                    # "Print" = "spawn '${pkgs.grim}/bin/grim -g \"$(${pkgs.slurp}/bin/slurp)\" ~/Pictures/Screenshots/Screenshot_$(date +%Y%m%d_%H%M%S).png'";
+                    # # 剪贴板历史 (需要 fuzzel 配合)
+                    # "Super V" = "spawn '${pkgs.cliphist}/bin/cliphist list | ${pkgs.fuzzel}/bin/fuzzel --dmenu | ${pkgs.cliphist}/bin/cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy'";
+
+                };
+
+                # 启动自运行：同步环境、设置分辨率、壁纸和布局
+                spawn = [
+                    "'dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=river'"
+                    "'${pkgs.swaybg}/bin/swaybg -i ${osConfig.stylix.image} -m fill'"
+                    "'${pkgs.wlr-randr}/bin/wlr-randr --output eDP-1 --mode 1280x960@144'"
+                    # 间距设为 10，保持美观
+                    "'${pkgs.rivertile}/bin/rivertile -view-padding 10 -outer-padding 10'"
+                    # "'${pkgs.wl-clipboard}/bin/wl-paste --watch ${pkgs.cliphist}/bin/cliphist store'"
+                ];
+            };
+        };
+
+        # 确保 River 依赖的工具在用户环境也可用
+        home.packages = with pkgs; [
+            swaybg
+            wlr-randr
+            rivertile
+            # grim slurp wl-clipboard cliphist
+        ];
+    };
+}
