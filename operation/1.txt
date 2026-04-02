@@ -109,7 +109,7 @@
                     "'${pkgs.swaybg}/bin/swaybg -i ${osConfig.stylix.image} -m fill'"
                     "'${pkgs.wlr-randr}/bin/wlr-randr --output eDP-1 --mode 1280x960@144'"
                     # 间距设为 10，保持美观
-                    "'${pkgs.rivertile}/bin/rivertile -view-padding 10 -outer-padding 10'"
+                    "'${pkgs.rivertile}/bin/rivertile -view-padding 10 -outer-padding 10 -main-ratio 0.65'"
                     # "'${pkgs.wl-clipboard}/bin/wl-paste --watch ${pkgs.cliphist}/bin/cliphist store'"
                 ];
             };
